@@ -1,0 +1,10 @@
+
+/build
+__pycache__
+/.idea
+/venv
+/alphamini.egg-info
+/dist
+echo ".env" >> .gitignore
+keys.env
+test/keys.env

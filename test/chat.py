@@ -1,12 +1,13 @@
 import asyncio
 import os
-import subprocess
-from dotenv import load_dotenv
+import time
 from gtts import gTTS
+import git
 import google.generativeai as genai
 import mini.mini_sdk as MiniSdk
 from mini.apis.api_sound import PlayAudio
 from mini import AudioStorageType, MiniApiResultType
+from dotenv import load_dotenv
 
 # Cargar variables de entorno desde keys.env
 load_dotenv("keys.env")
@@ -18,21 +19,22 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 # Configurar Google API
 genai.configure(api_key=GOOGLE_API_KEY)
 
+
 def obtener_respuesta_chatbot(mensaje: str) -> str:
     """
-    Gets a response from the Gemini chatbot.
+    Obtiene una respuesta del chatbot Gemini.
     """
     try:
-        # Configure the model
+        # Configurar el modelo
         model = genai.GenerativeModel('gemini-2.0-flash')
 
-        # Create the chat
+        # Crear el chat
         chat = model.start_chat(history=[])
 
-        # Get response
+        # Obtener respuesta
         response = chat.send_message(mensaje)
 
-        # Extract text from the response
+        # Extraer texto de la respuesta
         return response.text
 
     except Exception as e:
@@ -40,69 +42,71 @@ def obtener_respuesta_chatbot(mensaje: str) -> str:
         return "Ha ocurrido un error al procesar tu mensaje."
 
 
-# Function to copy files to the repository
 def copiarARepo(audio_path: str):
+    """
+    Copia un archivo al repositorio Git y lo sube a GitHub.
+    """
     try:
-        # Clone repository if not already cloned
-        if not os.path.exists("audio"):
+        # Clona repositorio si no está clonado
+        if not os.path.exists("audio_repo"):
             print("Clonando el repositorio...")
-            subprocess.run(["git", "clone", "https://github.com/pecec1to/audio.git"], check=True)
+            git.Repo.clone_from("https://github.com/pecec1to/audio.git", "audio_repo")
 
-        # Copy file to repository using correct syntax for Windows
+        # Elimina el archivo existente si existe
+        repo_audio_path = "audio_repo/respuesta_chatbot.mp3"
+        if os.path.exists(repo_audio_path):
+            print(f"Eliminando archivo existente: {repo_audio_path}")
+            os.remove(repo_audio_path)
+
+        # Copia archivo al repositorio
         print(f"Copiando archivo {audio_path} al repositorio...")
-        subprocess.run(["copy", audio_path, "audio\\respuesta_chatbot.mp3"], shell=True, check=True)
+        os.system(f"copy {audio_path} audio_repo\\respuesta_chatbot.mp3")  # Para Windows
 
-        # Change to repository directory
-        current_dir = os.getcwd()
-        os.chdir("audio")
+        # Abre el repositorio
+        repo = git.Repo("audio_repo")
 
-        # Add file to repository
+        # Añade archivo al repositorio (incluso si no hay cambios)
         print("Añadiendo archivo al repositorio...")
-        subprocess.run(["git", "add", "respuesta_chatbot.mp3"], check=True)
+        repo.git.add("respuesta_chatbot.mp3")
 
-        # Commit
+        # Commit (forzado)
         print("Haciendo commit...")
-        subprocess.run(["git", "commit", "-m", "Añadir archivo de audio"], check=True)
+        repo.index.commit("Actualizar archivo de audio")
 
         # Push
         print("Subiendo cambios a GitHub...")
-        subprocess.run(["git", "push", "origin", "main"], check=True)
+        origin = repo.remote(name='origin')
+        origin.push()
 
         print("Archivo subido a GitHub.")
 
-        # Return to original directory
-        os.chdir(current_dir)
-    except subprocess.CalledProcessError as e:
+    except Exception as e:
         print(f"Error al subir el archivo a GitHub: {e}")
 
 
-async def generar_reproducir_tts_chatbot(mensaje_usuario: str):
+async def generar_reproducir_tts(texto: str):
     """
-    Generates and plays the chatbot response as audio.
+    Genera un archivo de audio TTS, lo sube a GitHub y lo reproduce en el robot.
     """
     try:
-        # Get response from chatbot
-        print("Obteniendo respuesta de Gemini...")
-        respuesta = obtener_respuesta_chatbot(mensaje_usuario)
-        print(f"Respuesta de Gemini: {respuesta}")
-
-        # Convert response to audio
-        tts = gTTS(text=respuesta, lang='es')
+        # Convertir texto a audio
+        tts = gTTS(text=texto, lang='es')
         audio_path = "respuesta_chatbot.mp3"
         tts.save(audio_path)
 
-        # Verify if file exists
+        # Verificar si el archivo existe
         if not os.path.exists(audio_path):
             raise FileNotFoundError(f"El archivo no fue generado en la ruta: {audio_path}")
         print(f"Archivo de audio generado exitosamente: {audio_path}")
 
-        # Upload file to repository
+        # Subir el archivo al repositorio
         copiarARepo(audio_path)
 
-        # Public URL of the file on GitHub Pages
-        public_url = "https://pecec1to.github.io/audio/respuesta_chatbot.mp3"
+        # URL pública del archivo en GitHub Pages con invalidación de caché
+        timestamp = int(time.time())  # Genera un timestamp único
+        public_url = f"https://pecec1to.github.io/audio/respuesta_chatbot.mp3?cache_bust={timestamp}"
 
-        # Play audio file on the robot
+        # Reproducir el archivo de audio en el robot
         block = PlayAudio(
             url=public_url,
             storage_type=AudioStorageType.NET_PUBLIC,
@@ -142,7 +146,12 @@ async def _run():
                 if mensaje.lower() == 'salir':
                     break
 
-                await generar_reproducir_tts_chatbot(mensaje)
+                # Respuesta del chatbot
+                respuesta = obtener_respuesta_chatbot(mensaje)
+                print(f"Respuesta de Gemini: {respuesta}")
+
+                # Generar y reproducir TTS
+                await generar_reproducir_tts(respuesta)
 
             print("Saliendo del modo programa...")
             await MiniSdk.quit_program()

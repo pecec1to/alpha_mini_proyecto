@@ -18,7 +18,7 @@ async def generarReproducirTTS():
 
     try:
         tts = gTTS(text=texto, lang='es')
-        audio_path = "mensaje_es.mp3"
+        audio_path = "tts_demo/play_tts/audio/mensaje_es.mp3"
         tts.save(audio_path)
 
         # verificar si el archivo existe
@@ -51,12 +51,12 @@ async def generarReproducirTTS():
 def copiarARepo(audio_path: str):
     try:
         # Clona repositorio si no está clonado
-        if not os.path.exists("audio"):
+        if not os.path.exists("tts_demo/play_tts/audio/audio"):
             print("Clonando el repositorio...")
-            git.Repo.clone_from("https://github.com/pecec1to/audio.git", "audio")
+            git.Repo.clone_from("https://github.com/pecec1to/audio.git", "tts_demo/play_tts/audio/audio")
 
         # Elimina el archivo existente si existe
-        repo_audio_path = "audio/mensaje_es.mp3"
+        repo_audio_path = "tts_demo/play_tts/audio/audio/mensaje_es.mp3"
         if os.path.exists(repo_audio_path):
             print(f"Eliminando archivo existente: {repo_audio_path}")
             os.remove(repo_audio_path)
@@ -66,7 +66,7 @@ def copiarARepo(audio_path: str):
         os.system(f"copy {audio_path} audio\\mensaje_es.mp3")  # Para Windows
 
         # Abre el repositorio
-        repo = git.Repo("audio")
+        repo = git.Repo("tts_demo/play_tts/audio/audio")
 
         # Añade archivo al repositorio (incluso si no hay cambios)
         print("Añadiendo archivo al repositorio...")

@@ -16,23 +16,21 @@ import platform
 # Cargar variables de entorno desde keys.env
 load_dotenv("keys.env")
 
-# Configurar claves desde variables de entorno
+# Configurar claves
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-# Configurar Google API
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # Variables globales
 SERVER_PORT = 8000
-SERVER_HOST = "0.0.0.0"  # Bind a todas las interfaces
+SERVER_HOST = "0.0.0.0"
 server_thread = None
 http_server = None
 local_ip = None
 bluetooth_device = None
-USE_BLUETOOTH = False  # Configuración para usar Bluetooth (True) o el robot (False)
+USAR_BLUETOOTH = False  # Usar Bluetooth (True) o el robot (False)
 
 
-# Clase para manejar solicitudes HTTP
+# Handler clase HTTP
 class AudioHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=os.getcwd(), **kwargs)
@@ -42,9 +40,9 @@ class AudioHandler(SimpleHTTPRequestHandler):
         pass
 
 
-def obtener_respuesta_chatbot(mensaje: str) -> str:
+def ObtenerRespuestaChatbot(mensaje: str) -> str:
     """
-    Obtiene una respuesta del chatbot Gemini.
+    Obtiene una respuesta del chatbot
     """
     try:
         # Configurar el modelo
@@ -64,9 +62,9 @@ def obtener_respuesta_chatbot(mensaje: str) -> str:
         return "Ha ocurrido un error al procesar tu mensaje."
 
 
-def get_local_ip():
+def GetIPLocal():
     """
-    Obtiene la dirección IP local del dispositivo.
+    Obtiene la dirección IP local del dispositivo
     """
     import socket
     try:
@@ -81,9 +79,9 @@ def get_local_ip():
         return "127.0.0.1"  # Fallback a localhost
 
 
-def start_http_server():
+def StartHTTPServer():
     """
-    Inicia un servidor HTTP en un hilo separado.
+    Inicia un servidor HTTP en un hilo separado
     """
     global http_server, server_thread
 
@@ -97,9 +95,9 @@ def start_http_server():
         print(f"Error al iniciar el servidor HTTP: {e}")
 
 
-def stop_http_server():
+def StopHTTPServer():
     """
-    Detiene el servidor HTTP.
+    Detiene el servidor HTTP
     """
     global http_server
     if http_server:
@@ -107,9 +105,9 @@ def stop_http_server():
         print("Servidor HTTP detenido")
 
 
-def listar_dispositivos_bluetooth():
+def ListarDispBluetooth():
     """
-    Lista los dispositivos Bluetooth disponibles.
+    Lista los dispositivos Bluetooth disponibles
     """
     sistema = platform.system()
 
@@ -126,41 +124,41 @@ def listar_dispositivos_bluetooth():
         except Exception as e:
             print(f"Error al listar dispositivos Bluetooth en Windows: {e}")
 
-    elif sistema == "Linux":
-        try:
-            print("Listando dispositivos Bluetooth en Linux...")
-            # Usar bluetoothctl para listar dispositivos
-            result = subprocess.run(
-                ["bluetoothctl", "devices"],
-                capture_output=True, text=True
-            )
-            print(result.stdout)
-            return result.stdout
-        except Exception as e:
-            print(f"Error al listar dispositivos Bluetooth en Linux: {e}")
-
-    elif sistema == "Darwin":  # macOS
-        try:
-            print("Listando dispositivos Bluetooth en macOS...")
-            # Usar system_profiler para listar dispositivos
-            result = subprocess.run(
-                ["system_profiler", "SPBluetoothDataType"],
-                capture_output=True, text=True
-            )
-            print(result.stdout)
-            return result.stdout
-        except Exception as e:
-            print(f"Error al listar dispositivos Bluetooth en macOS: {e}")
-
-    else:
-        print(f"Sistema operativo no soportado: {sistema}")
+    # elif sistema == "Linux":
+    #     try:
+    #         print("Listando dispositivos Bluetooth en Linux...")
+    #         # Usar bluetoothctl para listar dispositivos
+    #         result = subprocess.run(
+    #             ["bluetoothctl", "devices"],
+    #             capture_output=True, text=True
+    #         )
+    #         print(result.stdout)
+    #         return result.stdout
+    #     except Exception as e:
+    #         print(f"Error al listar dispositivos Bluetooth en Linux: {e}")
+    #
+    # elif sistema == "Darwin":  # macOS
+    #     try:
+    #         print("Listando dispositivos Bluetooth en macOS...")
+    #         # Usar system_profiler para listar dispositivos
+    #         result = subprocess.run(
+    #             ["system_profiler", "SPBluetoothDataType"],
+    #             capture_output=True, text=True
+    #         )
+    #         print(result.stdout)
+    #         return result.stdout
+    #     except Exception as e:
+    #         print(f"Error al listar dispositivos Bluetooth en macOS: {e}")
+    #
+    # else:
+    #     print(f"Sistema operativo no soportado: {sistema}")
 
     return "No se pudieron listar los dispositivos Bluetooth"
 
 
-def conectar_dispositivo_bluetooth(mac_address=None):
+def ConectarDispBluetooth(mac_address=None):
     """
-    Conecta a un dispositivo Bluetooth por su dirección MAC.
+    Conecta a un dispositivo Bluetooth por dirección MAC
     """
     global bluetooth_device
 
@@ -168,7 +166,7 @@ def conectar_dispositivo_bluetooth(mac_address=None):
 
     if mac_address is None:
         print("No se proporcionó una dirección MAC. Listando dispositivos disponibles...")
-        listar_dispositivos_bluetooth()
+        ListarDispBluetooth()
         mac_address = input("Introduce la dirección MAC del dispositivo Bluetooth: ")
 
     if sistema == "Windows":
@@ -193,51 +191,51 @@ def conectar_dispositivo_bluetooth(mac_address=None):
             print(f"Error al conectar al dispositivo Bluetooth en Windows: {e}")
             return False
 
-    elif sistema == "Linux":
-        try:
-            print(f"Conectando al dispositivo Bluetooth {mac_address} en Linux...")
-            # Usar bluetoothctl para conectar
-            result = subprocess.run(
-                ["bluetoothctl", "connect", mac_address],
-                capture_output=True, text=True
-            )
-            if "Connection successful" in result.stdout:
-                print(f"Conectado exitosamente al dispositivo: {mac_address}")
-                bluetooth_device = mac_address
-                return True
-            else:
-                print(f"Error al conectar: {result.stdout}")
-                return False
-        except Exception as e:
-            print(f"Error al conectar al dispositivo Bluetooth en Linux: {e}")
-            return False
-
-    elif sistema == "Darwin":  # macOS
-        try:
-            print(f"Conectando al dispositivo Bluetooth {mac_address} en macOS...")
-            # En macOS, usamos BluetoothConnector (necesita estar instalado)
-            result = subprocess.run(
-                ["BluetoothConnector", mac_address, "--connect"],
-                capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                print(f"Conectado exitosamente al dispositivo: {mac_address}")
-                bluetooth_device = mac_address
-                return True
-            else:
-                print(f"Error al conectar: {result.stderr}")
-                return False
-        except Exception as e:
-            print(f"Error al conectar al dispositivo Bluetooth en macOS: {e}")
-            print("Asegúrate de tener BluetoothConnector instalado: brew install bluetoothconnector")
-            return False
+    # elif sistema == "Linux":
+    #     try:
+    #         print(f"Conectando al dispositivo Bluetooth {mac_address} en Linux...")
+    #         # Usar bluetoothctl para conectar
+    #         result = subprocess.run(
+    #             ["bluetoothctl", "connect", mac_address],
+    #             capture_output=True, text=True
+    #         )
+    #         if "Connection successful" in result.stdout:
+    #             print(f"Conectado exitosamente al dispositivo: {mac_address}")
+    #             bluetooth_device = mac_address
+    #             return True
+    #         else:
+    #             print(f"Error al conectar: {result.stdout}")
+    #             return False
+    #     except Exception as e:
+    #         print(f"Error al conectar al dispositivo Bluetooth en Linux: {e}")
+    #         return False
+    #
+    # elif sistema == "Darwin":  # macOS
+    #     try:
+    #         print(f"Conectando al dispositivo Bluetooth {mac_address} en macOS...")
+    #         # En macOS, usamos BluetoothConnector (necesita estar instalado)
+    #         result = subprocess.run(
+    #             ["BluetoothConnector", mac_address, "--connect"],
+    #             capture_output=True, text=True
+    #         )
+    #         if result.returncode == 0:
+    #             print(f"Conectado exitosamente al dispositivo: {mac_address}")
+    #             bluetooth_device = mac_address
+    #             return True
+    #         else:
+    #             print(f"Error al conectar: {result.stderr}")
+    #             return False
+    #     except Exception as e:
+    #         print(f"Error al conectar al dispositivo Bluetooth en macOS: {e}")
+    #         print("Asegúrate de tener BluetoothConnector instalado: brew install bluetoothconnector")
+    #         return False
 
     else:
         print(f"Sistema operativo no soportado: {sistema}")
         return False
 
 
-def reproducir_audio_bluetooth(audio_path):
+def ReproducirAudioBluetooth(audio_path):
     """
     Reproduce un archivo de audio a través de un dispositivo Bluetooth.
     """
@@ -282,7 +280,7 @@ def reproducir_audio_bluetooth(audio_path):
         return False
 
 
-async def generar_reproducir_tts(texto: str):
+async def GenerarReproducirTTS(texto: str):
     """
     Genera un archivo de audio TTS y lo reproduce en el robot o por Bluetooth.
     """
@@ -302,10 +300,10 @@ async def generar_reproducir_tts(texto: str):
         print(f"Archivo de audio generado exitosamente: {audio_filename}")
 
         # Reproducir según la configuración
-        if USE_BLUETOOTH:
+        if USAR_BLUETOOTH:
             # Reproducir por Bluetooth
             print("Reproduciendo audio por Bluetooth...")
-            success = reproducir_audio_bluetooth(audio_filename)
+            success = ReproducirAudioBluetooth(audio_filename)
             if success:
                 print("Audio reproducido exitosamente por Bluetooth")
             else:
@@ -350,33 +348,33 @@ async def generar_reproducir_tts(texto: str):
 
 async def _run():
     try:
-        global local_ip, USE_BLUETOOTH
-        local_ip = get_local_ip()
+        global local_ip, USAR_BLUETOOTH
+        local_ip = GetIPLocal()
         print(f"IP local: {local_ip}")
 
         # Preguntar al usuario si quiere usar Bluetooth o el robot
         opcion = input("¿Deseas reproducir el audio por Bluetooth (B) o en el robot (R)? [B/R]: ").upper()
         if opcion == 'B':
-            USE_BLUETOOTH = True
+            USAR_BLUETOOTH = True
             print("Modo Bluetooth activado")
 
             # Listar dispositivos Bluetooth
-            listar_dispositivos_bluetooth()
+            ListarDispBluetooth()
 
             # Conectar a un dispositivo Bluetooth
             mac_address = input("Introduce la dirección MAC del dispositivo Bluetooth (deja en blanco para cancelar): ")
             if mac_address:
-                conectado = conectar_dispositivo_bluetooth(mac_address)
+                conectado = ConectarDispBluetooth(mac_address)
                 if not conectado:
                     print("No se pudo conectar al dispositivo Bluetooth. Cambiando a modo robot.")
-                    USE_BLUETOOTH = False
+                    USAR_BLUETOOTH = False
         else:
-            USE_BLUETOOTH = False
+            USAR_BLUETOOTH = False
             print("Modo robot activado")
 
         # Iniciar el servidor HTTP (necesario para el robot)
-        if not USE_BLUETOOTH:
-            start_http_server()
+        if not USAR_BLUETOOTH:
+            StartHTTPServer()
 
             print("Buscando el robot...")
             device = await MiniSdk.get_device_by_name("20256", 10)
@@ -385,23 +383,23 @@ async def _run():
                 is_connected = await MiniSdk.connect(device)
                 if not is_connected:
                     print("No se pudo conectar al robot")
-                    stop_http_server()
+                    StopHTTPServer()
                     return
 
                 print("Entrando en modo programa...")
                 success = await MiniSdk.enter_program()
                 if not success:
                     print("No se pudo entrar en modo programa")
-                    stop_http_server()
+                    StopHTTPServer()
                     return
             else:
                 print("No se encontró el robot")
-                stop_http_server()
+                StopHTTPServer()
                 return
 
         # Prueba de audio
         print("Realizando prueba de audio...")
-        await generar_reproducir_tts(
+        await GenerarReproducirTTS(
             "Prueba de audio. Si escuchas este mensaje, la configuración está funcionando correctamente.")
 
         print("Iniciando interacción con Gemini...")
@@ -411,14 +409,14 @@ async def _run():
                 break
 
             # Respuesta del chatbot
-            respuesta = obtener_respuesta_chatbot(mensaje)
+            respuesta = ObtenerRespuestaChatbot(mensaje)
             print(f"Respuesta de Gemini: {respuesta}")
 
             # Generar y reproducir TTS
-            await generar_reproducir_tts(respuesta)
+            await GenerarReproducirTTS(respuesta)
 
         # Limpiar recursos
-        if not USE_BLUETOOTH:
+        if not USAR_BLUETOOTH:
             print("Saliendo del modo programa...")
             await MiniSdk.quit_program()
 
@@ -426,12 +424,12 @@ async def _run():
             await MiniSdk.release()
 
             # Detener el servidor HTTP
-            stop_http_server()
+            StopHTTPServer()
 
     except Exception as e:
         print(f"Error en la ejecución: {e}")
-        if not USE_BLUETOOTH:
-            stop_http_server()
+        if not USAR_BLUETOOTH:
+            StopHTTPServer()
 
 
 MiniSdk.set_robot_type(MiniSdk.RobotType.MINI)

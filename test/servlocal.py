@@ -60,7 +60,7 @@ def ObtenerRespuestaChatbot(mensaje: str) -> str:
 
 def GetIPLocal():
     """
-    Obtiene la dirección IP local del dispositivo.
+    Obtiene la dirección IP local del dispositivo
     """
     import socket
     try:

@@ -26,7 +26,7 @@ http_server = None
 local_ip = None
 
 
-# Clase para manejar solicitudes HTTP
+# Handler clase HTTP
 class AudioHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=os.getcwd(), **kwargs)
@@ -36,15 +36,15 @@ class AudioHandler(SimpleHTTPRequestHandler):
         pass
 
 
-def obtener_respuesta_chatbot(mensaje: str) -> str:
+def ObtenerRespuestaChatbot(mensaje: str) -> str:
     """
-    Obtiene una respuesta del chatbot Gemini.
+    Obtiene una respuesta del chatbot
     """
     try:
-        # Configurar el modelo
+        # Configurar modelo
         model = genai.GenerativeModel('gemini-2.0-flash')
 
-        # Crear el chat
+        # Crear chat
         chat = model.start_chat(history=[])
 
         # Obtener respuesta
@@ -58,7 +58,7 @@ def obtener_respuesta_chatbot(mensaje: str) -> str:
         return "Ha ocurrido un error al procesar tu mensaje."
 
 
-def get_local_ip():
+def GetIPLocal():
     """
     Obtiene la dirección IP local del dispositivo.
     """
@@ -72,12 +72,12 @@ def get_local_ip():
         return local_ip
     except Exception as e:
         print(f"Error al obtener la IP local: {e}")
-        return "127.0.0.1"  # Fallback a localhost
+        return "127.0.0.1"
 
 
-def start_http_server():
+def StartHTTPServer():
     """
-    Inicia un servidor HTTP en un hilo separado.
+    Inicia un servidor HTTP en un hilo separado
     """
     global http_server, server_thread
 
@@ -91,9 +91,9 @@ def start_http_server():
         print(f"Error al iniciar el servidor HTTP: {e}")
 
 
-def stop_http_server():
+def StopHTTPServer():
     """
-    Detiene el servidor HTTP.
+    Detiene servidor HTTP
     """
     global http_server
     if http_server:
@@ -101,15 +101,13 @@ def stop_http_server():
         print("Servidor HTTP detenido")
 
 
-async def generar_reproducir_tts_local(texto: str):
+async def GenerarReproducirTTS(texto: str):
     """
-    Genera un archivo de audio TTS y lo reproduce en el robot usando un servidor local.
+    Genera archivo de audio TTS y lo manda al robot usando servidor local
     """
     try:
-        # Generar un nombre único para el archivo
-        unique_id = str(uuid.uuid4())[:8]
         timestamp = int(time.time())
-        audio_filename = f"respuesta_{unique_id}_{timestamp}.mp3"
+        audio_filename = f"respuesta_{timestamp}.mp3"
 
         # Convertir texto a audio
         tts = gTTS(text=texto, lang='es')
@@ -120,7 +118,7 @@ async def generar_reproducir_tts_local(texto: str):
             raise FileNotFoundError(f"El archivo no fue generado en la ruta: {audio_filename}")
         print(f"Archivo de audio generado exitosamente: {audio_filename}")
 
-        # Construir la URL usando la IP local
+        # Construir URL usando la IP local
         global local_ip
         audio_url = f"http://{local_ip}:{SERVER_PORT}/{audio_filename}"
         print(f"URL del audio: {audio_url}")
@@ -146,8 +144,7 @@ async def generar_reproducir_tts_local(texto: str):
                     print("Reintentando en 2 segundos...")
                     await asyncio.sleep(2)
 
-        # Eliminar el archivo después de reproducirlo (opcional)
-        # Comentar esta línea si quieres mantener los archivos
+        # Eliminar el archivo después de reproducirlo
         os.remove(audio_filename)
 
     except Exception as e:
@@ -157,11 +154,11 @@ async def generar_reproducir_tts_local(texto: str):
 async def _run():
     try:
         global local_ip
-        local_ip = get_local_ip()
+        local_ip = GetIPLocal()
         print(f"IP local: {local_ip}")
 
-        # Iniciar el servidor HTTP
-        start_http_server()
+        # Iniciar servidor HTTP
+        StartHTTPServer()
 
         print("Buscando el robot...")
         device = await MiniSdk.get_device_by_name("20256", 10)
@@ -170,20 +167,20 @@ async def _run():
             is_connected = await MiniSdk.connect(device)
             if not is_connected:
                 print("No se pudo conectar al robot")
-                stop_http_server()
+                StopHTTPServer()
                 return
 
             print("Entrando en modo programa...")
             success = await MiniSdk.enter_program()
             if not success:
                 print("No se pudo entrar en modo programa")
-                stop_http_server()
+                StopHTTPServer()
                 return
 
-            # Prueba de reproducción de audio
-            print("Realizando prueba de audio...")
-            await generar_reproducir_tts_local(
-                "Prueba de audio. Si escuchas este mensaje, la configuración está funcionando correctamente.")
+            # # Prueba de audio
+            # print("Realizando prueba de audio...")
+            # await GenerarReproducirTTS(
+            #     "Prueba de audio. Si escuchas este mensaje, la configuración está funcionando correctamente.")
 
             print("Iniciando interacción con Gemini...")
             while True:
@@ -192,11 +189,11 @@ async def _run():
                     break
 
                 # Respuesta del chatbot
-                respuesta = obtener_respuesta_chatbot(mensaje)
+                respuesta = ObtenerRespuestaChatbot(mensaje)
                 print(f"Respuesta de Gemini: {respuesta}")
 
                 # Generar y reproducir TTS
-                await generar_reproducir_tts_local(respuesta)
+                await GenerarReproducirTTS(respuesta)
 
             print("Saliendo del modo programa...")
             await MiniSdk.quit_program()
@@ -207,11 +204,11 @@ async def _run():
             print("No se encontró el robot")
 
         # Detener el servidor HTTP
-        stop_http_server()
+        StopHTTPServer()
 
     except Exception as e:
         print(f"Error en la ejecución: {e}")
-        stop_http_server()
+        StopHTTPServer()
 
 
 MiniSdk.set_robot_type(MiniSdk.RobotType.MINI)
